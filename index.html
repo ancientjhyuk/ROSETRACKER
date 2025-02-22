@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reservation Tracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="p-6 bg-gray-100 min-h-screen">
+    <div class="container mx-auto max-w-6xl">
+        <h1 class="text-4xl font-extrabold mb-6 text-center text-blue-700">Reservation Tracker</h1>
+        <p id="currentTime" class="mb-4 text-lg font-medium">Current Time (PST): </p>
+
+        <form id="reservationForm" class="space-y-4 bg-white p-6 rounded-lg shadow-md">
+            <div class="grid grid-cols-2 gap-4">
+                <input type="text" name="traveller" placeholder="Traveller Name" required class="block w-full p-2 border rounded">
+                <input type="text" name="pnr" placeholder="PNR" required class="block w-full p-2 border rounded">
+                <input type="text" name="dkNumber" placeholder="DK Number" class="block w-full p-2 border rounded" onchange="autoFillDK()">
+                <input type="text" name="starProfile" placeholder="Star Profile" readonly class="block w-full p-2 border rounded bg-gray-200">
+                <input type="text" name="companyName" placeholder="Company Name" readonly class="block w-full p-2 border rounded bg-gray-200">
+            </div>
+
+            <div class="grid grid-cols-3 gap-4">
+                <select name="transactionType" required class="block w-full p-2 border rounded">
+                    <option value="">Select Transaction Type</option>
+                    <option value="Email Groups">Email Groups</option>
+                    <option value="Email Corp">Email Corp</option>
+                    <option value="Reception Call">Reception Call</option>
+                    <option value="QUEUE PROCESSING">QUEUE PROCESSING</option>
+                    <option value="OUTBOUND CALL">OUTBOUND CALL</option>
+                    <option value="INBOUND CALL">INBOUND CALL</option>
+                    <option value="CONFIRM BILLING">CONFIRM BILLING</option>
+                    <option value="ONLINE SUPPORT">ONLINE SUPPORT</option>
+                </select>
+
+                <select name="process" required class="block w-full p-2 border rounded">
+                    <option value="">Select Process</option>
+                    <option value="EXCHANGE">EXCHANGE</option>
+                    <option value="NEW TICKET">NEW TICKET</option>
+                    <option value="INVOICE">INVOICE</option>
+                    <option value="MISC">MISC</option>
+                    <option value="QUEUES">QUEUES</option>
+                    <option value="VOID">VOID</option>
+                </select>
+
+                <select name="priority" required class="block w-full p-2 border rounded">
+                    <option value="">Select Priority</option>
+                    <option value="URGENT">URGENT</option>
+                    <option value="NON URGENT">NON URGENT</option>
+                    <option value="EXCHANGE">EXCHANGE</option>
+                    <option value="NEW TICKET">NEW TICKET</option>
+                    <option value="INVOICE">INVOICE</option>
+                    <option value="MISC">MISC</option>
+                    <option value="QUEUES">QUEUES</option>
+                    <option value="VOID">VOID</option>
+                </select>
+            </div>
+
+            <div class="grid grid-cols-3 gap-4">
+                <select name="route" required class="block w-full p-2 border rounded">
+                    <option value="">Select Route</option>
+                    <option value="DOMESTIC">DOMESTIC</option>
+                    <option value="INTERNATIONAL">INTERNATIONAL</option>
+                </select>
+
+                <select name="payment" required class="block w-full p-2 border rounded">
+                    <option value="">Select Form of Payment</option>
+                    <option value="CORP CARD">CORP CARD</option>
+                    <option value="VPAY">VPAY</option>
+                    <option value="N/A">N/A</option>
+                    <option value="CHECK">CHECK</option>
+                    <option value="ANGIE CARD">ANGIE CARD</option>
+                    <option value="PERSONAL CARD">PERSONAL CARD</option>
+                </select>
+
+                <textarea name="description" placeholder="Description" class="block w-full p-2 border rounded"></textarea>
+            </div>
+
+            <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">Add Entry</button>
+        </form>
+
+        <h2 class="text-2xl font-semibold mt-8 mb-4">Entries</h2>
+        <div class="overflow-x-auto">
+            <table id="entriesTable" class="w-full border-collapse border border-gray-300 rounded-lg">
+                <thead>
+                    <tr class="bg-blue-500 text-white">
+                        <th class="border p-2">Date</th>
+                        <th class="border p-2">Time</th>
+                        <th class="border p-2">Agent Name</th>
+                        <th class="border p-2">Traveller</th>
+                        <th class="border p-2">PNR</th>
+                        <th class="border p-2">DK Number</th>
+                        <th class="border p-2">Star Profile</th>
+                        <th class="border p-2">Company Name</th>
+                        <th class="border p-2">Transaction Type</th>
+                        <th class="border p-2">Process</th>
+                        <th class="border p-2">Queue</th>
+                        <th class="border p-2">Priority</th>
+                        <th class="border p-2">Route</th>
+                        <th class="border p-2">Payment</th>
+                        <th class="border p-2">Description</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div class="mt-6 space-x-4">
+            <button onclick="exportToExcel()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">Export to Excel</button>
+            <button onclick="copyTable()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded">Copy Table</button>
+            <button onclick="clearAllEntries()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">Clear All</button>
+            <button onclick="undoClearEntries()" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded">Undo</button>
+        </div>
+    </div>
+
+    <script>
+        let deletedEntries = [];
+
+        function autoFillDK() {
+            const dkInput = document.querySelector("input[name='dkNumber']");
+            const starProfile = document.querySelector("input[name='starProfile']");
+            const companyName = document.querySelector("input[name='companyName']");
+            if (dkInput.value === '2077') {
+                starProfile.value = 'SURGICAL';
+                companyName.value = 'INTUITIVE SURGICAL';
+            } else {
+                starProfile.value = '';
+                companyName.value = '';
+            }
+        }
+
+        document.getElementById("reservationForm").addEventListener("submit", function(e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td class="border p-2">${new Date().toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles' })}</td>
+                <td class="border p-2">${new Date().toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles' })}</td>
+                <td class="border p-2">Rose Paulan</td>
+                <td class="border p-2">${formData.get('traveller')}</td>
+                <td class="border p-2">${formData.get('pnr')}</td>
+                <td class="border p-2">${formData.get('dkNumber')}</td>
+                <td class="border p-2">${formData.get('starProfile')}</td>
+                <td class="border p-2">${formData.get('companyName')}</td>
+                <td class="border p-2">${formData.get('transactionType')}</td>
+                <td class="border p-2">${formData.get('process')}</td>
+                <td class="border p-2">NA</td>
+                <td class="border p-2">${formData.get('priority')}</td>
+                <td class="border p-2">${formData.get('route')}</td>
+                <td class="border p-2">${formData.get('payment')}</td>
+                <td class="border p-2">${formData.get('description')}</td>
+            `;
+            document.querySelector("#entriesTable tbody").appendChild(row);
+            saveDataToLocalStorage();
+            e.target.reset();
+        });
+
+        function saveDataToLocalStorage() {
+            const table = document.querySelector("#entriesTable tbody");
+            const rows = Array.from(table.rows).map(row =>
+                Array.from(row.cells).map(cell => cell.innerText)
+            );
+            localStorage.setItem("reservationData", JSON.stringify(rows));
+        }
+
+        function loadDataFromLocalStorage() {
+            const storedData = JSON.parse(localStorage.getItem("reservationData")) || [];
+            const table = document.querySelector("#entriesTable tbody");
+            table.innerHTML = '';
+            storedData.forEach(rowData => {
+                const row = document.createElement("tr");
+                row.innerHTML = rowData.map(data => `<td class="border p-2">${data}</td>`).join('');
+                table.appendChild(row);
+            });
+        }
+
+        function clearAllEntries() {
+            const table = document.querySelector("#entriesTable tbody");
+            deletedEntries = Array.from(table.rows).map(row =>
+                Array.from(row.cells).map(cell => cell.innerText)
+            );
+            table.innerHTML = '';
+            localStorage.removeItem("reservationData");
+            alert("All entries cleared!");
+        }
+
+        function undoClearEntries() {
+            if (deletedEntries.length > 0) {
+                const table = document.querySelector("#entriesTable tbody");
+                deletedEntries.forEach(rowData => {
+                    const row = document.createElement("tr");
+                    row.innerHTML = rowData.map(data => `<td class="border p-2">${data}</td>`).join('');
+                    table.appendChild(row);
+                });
+                saveDataToLocalStorage();
+                deletedEntries = [];
+                alert("Undo successful! Entries restored.");
+            } else {
+                alert("No entries to undo.");
+            }
+        }
+
+        function exportToExcel() {
+            let table = document.getElementById("entriesTable");
+            let rows = Array.from(table.rows).map(row => Array.from(row.cells).map(cell => cell.innerText).join("\t")).join("\n");
+            let blob = new Blob([rows], { type: "text/plain;charset=utf-8" });
+            let link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "Reservation_Tracker.xls";
+            link.click();
+        }
+
+        function copyTable() {
+            const table = document.getElementById("entriesTable");
+            let rows = Array.from(table.rows).slice(1).map(row => 
+                Array.from(row.cells).map(cell => cell.innerText.trim()).join("\t")
+            ).join("\n");
+            navigator.clipboard.writeText(rows).then(() => alert("Table copied to clipboard with Date, Time, and aligned without spaces!"));
+        }
+
+        function updateTime() {
+            document.getElementById("currentTime").textContent = `Current Time (PST): ${new Date().toLocaleTimeString('en-US', { timeZone: 'America/Los_Angeles' })}`;
+        }
+
+        setInterval(updateTime, 1000);
+        updateTime();
+        loadDataFromLocalStorage();
+    </script>
+</body>
+</html>
